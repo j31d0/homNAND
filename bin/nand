@@ -1,0 +1,8 @@
+#!/bin/bash
+NAND_HOME="$(dirname "$(dirname "${BASH_SOURCE[0]}" )")"
+SV="2.11"
+SEP=":"
+TP_MANAGED="$(find ${NAND_HOME}/lib_managed -name "*.jar" | tr '\n' ${SEP})"
+
+CP="${NAND_HOME}/target/scala-${SV}/classes${SEP}${TP_MANAGED}${SEP}$CLASSPATH"
+java -cp "$CP" HomNAND.Main $@

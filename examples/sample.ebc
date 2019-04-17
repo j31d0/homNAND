@@ -1,0 +1,18 @@
+short a = 1;
+short b = 1;
+short c[10] = {1, 1, 1};
+
+short main() {
+  short f = 10;
+  f = a() + b();
+  return f;
+}
+
+short a() {
+  return 1;
+}
+
+
+short b() {
+  return 2;
+}
