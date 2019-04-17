@@ -464,7 +464,7 @@ object EBCCompiler {
     DisR(BPReg),
     RefRisD(RtReg),
     RisROpConst(BPReg, IRSub, SPReg, IRShort((1).toShort)),
-    RisROpConst(SPReg, IRSub, SPReg, IRShort(((k + 2)).toShort)) /*
+    RisROpConst(SPReg, IRSub, SPReg, IRShort(((k + 1)).toShort)) /*
     SP - 1 <- BP
     BP <- SP - 1
     SP <- SP - 1 - k
