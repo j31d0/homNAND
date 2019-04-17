@@ -478,7 +478,7 @@ object EBCCompiler {
             (irlist ++ irstmt, mt max mt2, mp max mp2)
           }
         }
-        (k -> EBIRFun(prolog(k, mt + mp) ++ irlist ++ epilog))
+        (k -> EBIRFun(prolog(k, mt + mp + stackSize(vars)) ++ irlist ++ epilog))
       }
     }
   }
