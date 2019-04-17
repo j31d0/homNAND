@@ -14,6 +14,9 @@ case class EBAssembly(inst: List[EBAInst], global: Map[String, List[Short]]) {
       IRLabelStmt("main_ret"),
       DisR(RtReg),
       RisD(MainReg),
+      AisConst(IRShort(1.toShort)),
+      DisA,
+      RisD(FinishReg),
       AisConst(IRLabel("finish_loop")),
       IRLabelStmt("finish_loop"),
       IRJMP
@@ -22,14 +25,14 @@ case class EBAssembly(inst: List[EBAInst], global: Map[String, List[Short]]) {
   }
   def toBin: (List[Short], List[Short]) = {
     val (sOffset, ramc) = global.toList.foldLeft(Map[String, Int](), List[Short]()) {
-      case ((s, r), (ns, nr)) => ((s + (ns -> r.length)), r ++ nr)
+      case ((s, r), (ns, nr)) => ((s + (ns -> (0x40 + r.length))), r ++ nr)
     }
     val (rOffset, romi) = inst.foldLeft(sOffset, List[EBARInst]()) {
       case ((s, r), i: EBARInst) => (s, r :+ i)
       case ((s, r), LInst(v)) => ((s + (v -> r.length)), r)
     }
     val romc = romi.map((i) => i.toBin(rOffset))
-    (romc.padTo(32768, 0.toShort), ramc.padTo(32768, 0.toShort))
+    (romc.padTo(32768, 0.toShort), (List.fill(0x40)(0.toShort) ++ ramc).padTo(32768, 0.toShort))
   }
 }
 

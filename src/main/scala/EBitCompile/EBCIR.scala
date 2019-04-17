@@ -177,6 +177,9 @@ case object Rt2Reg extends IRIReg {
 case object MainReg extends IRIReg {
   def absLoc: IConstV = IConstV(8.toShort)
 }
+case object FinishReg extends IRIReg {
+  def absLoc: IConstV = IConstV(9.toShort)
+}
 
 case object DReg extends IRReg
 
