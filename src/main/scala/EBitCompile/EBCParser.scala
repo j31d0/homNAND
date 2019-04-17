@@ -316,7 +316,7 @@ object EBCParser extends PackratParsers {
     }
   }
 
-  def assignable: Parser[EBCAssign] = varexp | arrget | refexp
+  def assignable: Parser[EBCAssign] = arrget | refexp | varexp
 
   def expr: Parser[EBCExpr] = {
     expr5
