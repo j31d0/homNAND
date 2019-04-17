@@ -235,7 +235,8 @@ object EBCCompiler {
       val restoreInst = (0 until usedRegs).map((i) =>
         List(
           RisROpConst(DReg, IRSub, BPReg, IRShort(((i + stackSize(vars) + usedTmp + 1)).toShort)),
-          RisD(RReg(i)))).foldLeft(List[EBIRStmt]()) {
+          DisR(RtReg),
+          RefRisD(RReg(i)))).foldLeft(List[EBIRStmt]()) {
         case (i, j) => i ++ j
       }
       val intoD = (((argsInst ++ saveInst ++ callInst)) ++ restoreInst) :+ DisR(RtReg)
