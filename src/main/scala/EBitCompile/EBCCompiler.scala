@@ -94,7 +94,7 @@ object EBCCompiler {
       val gi = globals indexWhere { case (x, y) => x == v }
       val intoD = (vi, pi, gi) match {
         case (i, _, _) if i >= 0 => {
-          val stackidx = (vars take i).foldLeft(0){
+          val stackidx = (vars take i).foldLeft(0) {
             case (i, (_, None)) => i + 1
             case (i, (_, Some(j))) => (i + j).toInt
           }
@@ -135,8 +135,18 @@ object EBCCompiler {
       val pi = params indexWhere { case x => x == v }
       val gi = globals indexWhere { case (x, y) => x == v }
       val intoD = (vi, pi, gi) match {
-        case (i, _, _) if i >= 0 => List(
-          RisROpConst(DReg, IRSub, BPReg, IRShort(((i + 1)).toShort)))
+        case (i, _, _) if i >= 0 => {
+          val stackidx = (vars take i).foldLeft(0) {
+            case (i, (_, None)) => i + 1
+            case (i, (_, Some(j))) => (i + j).toInt
+          }
+          vars(i) match {
+            case (_, None) => List(
+              RisROpConst(DReg, IRSub, BPReg, IRShort(((stackidx + 1)).toShort)))
+            case (_, Some(s)) => List(
+              RisROpConst(DReg, IRSub, BPReg, IRShort(((stackidx + s.toInt)).toShort)))
+          }
+        }
         case (_, i, _) if i >= 0 => List(
           RisROpConst(DReg, IRAdd, BPReg, IRShort((i + 2).toShort)))
         case (_, _, i) if i >= 0 => globals(i) match {
@@ -311,9 +321,14 @@ object EBCCompiler {
       val gi = globals indexWhere { case (x, y) => x == v }
       val loc = (vi, pi, gi) match {
         case (i, _, _) if i >= 0 => {
+          val stackidx = (vars take i).foldLeft(0) {
+            case (i, (_, None)) => i + 1
+            case (i, (_, Some(j))) => (i + j).toInt
+          }
           vars(i) match {
-            case (_, None) =>
-              BPLoc(-(i + 1))
+            case (_, None) => {
+              BPLoc(-(stackidx + 1))
+            }
             case (_, Some(_)) => throw new Exception("cannot change array")
           }
         }
