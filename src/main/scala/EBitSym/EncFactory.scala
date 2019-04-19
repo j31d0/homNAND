@@ -1,5 +1,7 @@
 package HomNAND
 import scala.util.Random
+import java.io._
+import sys.process._
 
 object EncFactory {
 
@@ -17,16 +19,13 @@ object EncFactory {
       sp(4), sp(5), sp(6), sp(7),
       sp(8), sp(9), sp(10), sp(11),
       sp(12), sp(13), sp(14), sp(15),
-      i
-  )).reduce(_ ++ _)
+      i)).reduce(_ ++ _)
   }
 
   def perm(k: Vector[EBitSym]): Vector[EBitSym] = {
     val p = List(0, 5, 15, 10, 3, 1, 7, 12, 11, 8, 6, 2, 13, 14, 9, 4)
     Vector.tabulate(16)((i) => k(p(i)))
   }
-
-
 
   def isubstitution(k: Vector[EBitSym]): Vector[EBitSym] = {
     val p = List(4, 5, 11, 0, 15, 1, 10, 6, 9, 14, 3, 8, 7, 12, 13, 2)
@@ -36,13 +35,11 @@ object EncFactory {
       sp(4), sp(5), sp(6), sp(7),
       sp(8), sp(9), sp(10), sp(11),
       sp(12), sp(13), sp(14), sp(15),
-      i
-  )).reduce(_ ++ _)
+      i)).reduce(_ ++ _)
   }
 
-
   def mux(a: EBitSym, b: EBitSym, s: EBitSym): EBitSym = {
-    SymOrBit(SymAndBit(a,SymNotBit(s).reduce).reduce, SymAndBit(b, s).reduce).reduce
+    SymOrBit(SymAndBit(a, SymNotBit(s).reduce).reduce, SymAndBit(b, s).reduce).reduce
   }
 
   def mux16(a: Vector[EBitSym], b: Vector[EBitSym], s: EBitSym): Vector[EBitSym] = {
@@ -68,23 +65,22 @@ object EncFactory {
     mux16(w0, w1, s(2))
   }
 
+  def mux16way16(
+    a: Vector[EBitSym], b: Vector[EBitSym],
+    c: Vector[EBitSym], d: Vector[EBitSym],
+    e: Vector[EBitSym], f: Vector[EBitSym],
+    g: Vector[EBitSym], h: Vector[EBitSym],
+    a1: Vector[EBitSym], b1: Vector[EBitSym],
+    c1: Vector[EBitSym], d1: Vector[EBitSym],
+    e1: Vector[EBitSym], f1: Vector[EBitSym],
+    g1: Vector[EBitSym], h1: Vector[EBitSym],
+    s: Vector[EBitSym]): Vector[EBitSym] = {
+    val w0 = mux8way16(a, b, c, d, e, f, g, h, s take 3)
+    val w1 = mux8way16(a1, b1, c1, d1, e1, f1, g1, h1, s take 3)
+    mux16(w0, w1, s(3))
+  }
 
-    def mux16way16(
-      a: Vector[EBitSym], b: Vector[EBitSym],
-      c: Vector[EBitSym], d: Vector[EBitSym],
-      e: Vector[EBitSym], f: Vector[EBitSym],
-      g: Vector[EBitSym], h: Vector[EBitSym],
-      a1: Vector[EBitSym], b1: Vector[EBitSym],
-      c1: Vector[EBitSym], d1: Vector[EBitSym],
-      e1: Vector[EBitSym], f1: Vector[EBitSym],
-      g1: Vector[EBitSym], h1: Vector[EBitSym],
-      s: Vector[EBitSym]): Vector[EBitSym] = {
-      val w0 = mux8way16(a, b, c, d, e, f, g, h, s take 3)
-      val w1 = mux8way16(a1, b1, c1, d1, e1, f1, g1, h1, s take 3)
-      mux16(w0, w1, s(3))
-    }
-
-  def dec(a: Vector[EBitSym], key: Vector[EBitSym]) =  a /*{
+  def dec(a: Vector[EBitSym], key: Vector[EBitSym]) = a /*{
     val k = isubstitution(a)
     val kb = (k zip key).map{ case (i, j) => i xor j}
     kb
@@ -102,19 +98,34 @@ object EncFactory {
     val decb = dec(b, key)
     val (ap, al) = (deca.head, deca.tail)
     val (bp, bl) = (decb.head, decb.tail)
-    val decanb = perm((ap nand bp) +: (al zip bl).map{ case (i, j) => (i xor j) })
+    val decanb = perm((ap nand bp) +: (al zip bl).map { case (i, j) => (i xor j) })
     enc(decanb, key)
   }
 
-  def prepare(ex: Vector[EBitSym]) : EFastCircuit = {
+  def prepare(ex: Vector[EBitSym]): EFastCircuit = {
     val k = ex.map(_.toExpr)
-    (0 until k.length).foreach((i) => println(s"out[$i] = ${k(i)};"))
+    val writer = new PrintWriter(new File("./libcircuit/HomNAND_EFastCircuit.c"))
+    val templates = List("#include \"HomNAND_EFastCircuit.h\"",
+      "",
+      "JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_feval",
+      "  (JNIEnv * env, jobject obj, jbooleanArray arr) {",
+      "jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);",
+      s"jboolean out[${k.length}];")
+    val templatef = List(s"jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,${k.length});",
+      "(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);",
+      s"(*env)->SetBooleanArrayRegion(env,outp,0,${k.length},(jboolean*)(&out));",
+      "return outp;",
+      "}")
+    templates.foreach((i) => writer.println(i))
+    (0 until k.length).foreach((i) => writer.println(s"out[$i] = ${k(i)};"))
+    templatef.foreach((i) => writer.println(i))
+    writer.close()
+    "make -C libcircuit".!
     println(System.mapLibraryName("EFastCircuit"))
     System.loadLibrary("EFastCircuit")
     new EFastCircuit
   }
 }
-
 
 case class HBit(v: Vector[Boolean])
 
@@ -130,7 +141,7 @@ object HBitNand extends EBitNand {
     case (HBit(i), HBit(j)) => HBit(homNand.feval((i ++ j).toArray).toVector)
   }
   def toByte(l: Vector[Boolean]): Byte = {
-    (0 until 8).foldLeft(0){
+    (0 until 8).foldLeft(0) {
       case (i, j) => if (l(j)) i | (1 << j) else i
     }.toByte
   }
@@ -147,7 +158,7 @@ object HBitNand extends EBitNand {
   }
 
   def exportP(fvec: Vector[T]): Array[Byte] = {
-    fvec.foldLeft(Vector[Byte]()){
+    fvec.foldLeft(Vector[Byte]()) {
       case (i, j) => i ++ toBytes(j)
     }.toArray
   }
