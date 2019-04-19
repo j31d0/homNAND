@@ -1,6 +1,7 @@
 package HomNAND
 
 import java.nio.file.{Files, Paths, StandardOpenOption}
+import scala.annotation.tailrec
 
 class EProg(e: EBitNand) {
   val ld: EBitLoader = new EBitLoader(e)
@@ -24,7 +25,8 @@ class EProg(e: EBitNand) {
     val f = ld.ec.es.ea.el.en exportP a
     ((f(0) & 0xff) | (f(1) & 0xff) << 8).toShort
   }
-  def run(s: State, c: Int): State = if (c == 0) s else s match {
+  @tailrec
+  final def run(s: State, c: Int): State = if (c == 0) s else s match {
     case (rom, ram, a, d, pc, valueM) => {
       val (nrom, nram, na, nd, npc, nvalueM) = ld.ec computer (rom, ram, a, d, pc, valueM)
       val sp = toInt16(nram.slice( 15 * 16, 16 * 16))
