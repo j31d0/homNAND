@@ -1,7 +1,7 @@
 package HomNAND
 
-class EBitArith(e: EBitNand) {
-  val el: EBitLogic = new EBitLogic(e)
+class EBitArith(e: EBitLogic) {
+  val el: EBitLogic = e
   type T = el.T
 
   def zero16(a: Vector[el.T], zero: el.T): Vector[el.T] = {

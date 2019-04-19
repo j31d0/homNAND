@@ -16,7 +16,7 @@ object Main {
       case _ => ()
     }
     println("sample computer")
-    val progEnv: EProg = new EProg(HBitNand)
+    val progEnv: EProg = new EProg(new EBitLoader(new EBitComputer(new EBitSeq(new EBitArith(HBitLogic)))))
     val state = progEnv.initState("examples/sample.mnd")
     val nextState = progEnv.run(state, 252)
     progEnv.writeState("examples/sample.mnd.state", nextState)

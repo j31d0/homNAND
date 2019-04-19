@@ -1,7 +1,7 @@
 package HomNAND
 
-class EBitComputer(e: EBitNand) {
-  val es: EBitSeq = new EBitSeq(e)
+class EBitComputer(e: EBitSeq) {
+  val es: EBitSeq = e
   type T = es.T
 
   def cpu(

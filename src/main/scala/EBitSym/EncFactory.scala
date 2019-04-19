@@ -98,24 +98,93 @@ object EncFactory {
     val decb = dec(b, key)
     val (ap, al) = (deca.head, deca.tail)
     val (bp, bl) = (decb.head, decb.tail)
-    val decanb = perm((ap nand bp) +: (al zip bl).map { case (i, j) => (i xor j) })
+    val decanb = (deca zip decb).map{case (i, j) => i nand j}// perm((ap nand bp) +: (al zip bl).map { case (i, j) => (i xor j) })
     enc(decanb, key)
   }
 
   def prepare(ex: Vector[EBitSym]): EFastCircuit = {
     val k = ex.map(_.toExpr)
+    val kl = k.length
+    val k2 = kl * 2
     val writer = new PrintWriter(new File("./libcircuit/HomNAND_EFastCircuit.c"))
     val templates = List("#include \"HomNAND_EFastCircuit.h\"",
-      "",
-      "JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_feval",
+      "#include <string.h>",
+      "static void fastnand(jboolean in[], jboolean out[]) {")
+    val templatef = List(
+      "}",
+      "JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastnand",
       "  (JNIEnv * env, jobject obj, jbooleanArray arr) {",
       "jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);",
-      s"jboolean out[${k.length}];")
-    val templatef = List(s"jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,${k.length});",
+      s"jboolean out[${kl}];",
+      "fastnand(in, out);",
+      s"jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,${kl});",
       "(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);",
-      s"(*env)->SetBooleanArrayRegion(env,outp,0,${k.length},(jboolean*)(&out));",
+      s"(*env)->SetBooleanArrayRegion(env,outp,0,${kl},(jboolean*)(&out));",
       "return outp;",
-      "}")
+      "}",
+      "JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastand",
+      "  (JNIEnv * env, jobject obj, jbooleanArray arr) {",
+      "jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);",
+      s"jboolean out[${k2}];",
+      s"jboolean out2[${kl}];",
+      "fastnand(in, out);",
+      s"memcpy(&out[${kl}], out, ${kl} * sizeof(jboolean));",
+      "fastnand(out, out2);",
+      s"jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,${kl});",
+      "(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);",
+      s"(*env)->SetBooleanArrayRegion(env,outp,0,${kl},(jboolean*)(&out2));",
+      "return outp;",
+      "}",
+      "JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastor",
+      "  (JNIEnv * env, jobject obj, jbooleanArray arr) {",
+      "jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);",
+      s"jboolean ina[${k2}];",
+      s"jboolean inb[${k2}];",
+      s"jboolean out[${k2}];",
+      s"jboolean out2[${kl}];",
+      s"memcpy(&ina[0], &in[0], ${kl} * sizeof(jboolean));",
+      s"memcpy(&ina[${kl}], &in[0], ${kl} * sizeof(jboolean));",
+      s"memcpy(&inb[0], &in[${kl}], ${kl} * sizeof(jboolean));",
+      s"memcpy(&inb[${kl}], &in[${kl}], ${kl} * sizeof(jboolean));",
+      "fastnand(ina, &out[0]);",
+      s"fastnand(inb, &out[${kl}]);",
+      "fastnand(out, out2);",
+      s"jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,${kl});",
+      "(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);",
+      s"(*env)->SetBooleanArrayRegion(env,outp,0,${kl},(jboolean*)(&out2));",
+      "return outp;",
+      "}",
+      "JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastxor",
+      "  (JNIEnv * env, jobject obj, jbooleanArray arr) {",
+      "jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);",
+      s"jboolean ab1[${k2}];",
+      s"jboolean ab2[${k2}];",
+      s"jboolean out[${kl}];",
+      "fastnand(in, ab1);",
+      s"memcpy(&ab1[${kl}], &in[0], ${kl} * sizeof(jboolean));",
+      "fastnand(ab1, &ab2[0]);",
+      s"memcpy(&ab1[${kl}], &in[${kl}], ${kl} * sizeof(jboolean));",
+      s"fastnand(ab1, &ab2[${kl}]);",
+      "fastnand(ab2, out);",
+      s"jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,${kl});",
+      "(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);",
+      s"(*env)->SetBooleanArrayRegion(env,outp,0,${kl},(jboolean*)(&out));",
+      "return outp;",
+      "}",
+      "JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastnot",
+      "  (JNIEnv * env, jobject obj, jbooleanArray arr) {",
+      "jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);",
+      s"jboolean a1[${k2}];",
+      s"jboolean out[${kl}];",
+      s"memcpy(&a1[0], &in[0], ${kl} * sizeof(jboolean));",
+      s"memcpy(&a1[${kl}], &in[0], ${kl} * sizeof(jboolean));",
+      "fastnand(a1, out);",
+      s"jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,${kl});",
+      "(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);",
+      s"(*env)->SetBooleanArrayRegion(env,outp,0,${kl},(jboolean*)(&out));",
+      "return outp;",
+      "}"
+    )
     templates.foreach((i) => writer.println(i))
     (0 until k.length).foreach((i) => writer.println(s"out[$i] = ${k(i)};"))
     templatef.foreach((i) => writer.println(i))
@@ -138,7 +207,7 @@ object HBitNand extends EBitNand {
   val etrue: HBit = HBit(EncFactory.enc(EncFactory.genShort(26585.toShort), EncFactory.genShort(key)).map((f) => f.eval(Vector())))
   def apply(a: Boolean): T = HBit(EncFactory.enc(Vector.tabulate(16)((n) => SymLocBit(n)), EncFactory.genShort(key)).map((f) => f.eval(a +: Vector.tabulate(15)((n) => rseed.nextBoolean))))
   def nand(a: HBit, b: HBit): HBit = (a, b) match {
-    case (HBit(i), HBit(j)) => HBit(homNand.feval((i ++ j).toArray).toVector)
+    case (HBit(i), HBit(j)) => HBit(homNand.fastnand((i ++ j).toArray).toVector)
   }
   def toByte(l: Vector[Boolean]): Byte = {
     (0 until 8).foldLeft(0) {
@@ -167,5 +236,92 @@ object HBitNand extends EBitNand {
     (farr.toList grouped 2).map((i) => fromBytes(i)).foldLeft(Vector[T]()) {
       case (v1, v2) => v1 :+ v2
     }
+  }
+}
+
+object HBitLogic extends EBitLogic(HBitNand) {
+  override val en = HBitNand
+
+  override def and(a: HBit, b: HBit): HBit = (a, b) match {
+    case (HBit(i), HBit(j)) => HBit(en.homNand.fastand((i ++ j).toArray).toVector)
+  }
+  override def or(a: HBit, b: HBit): HBit = (a, b) match {
+    case (HBit(i), HBit(j)) => HBit(en.homNand.fastor((i ++ j).toArray).toVector)
+  }
+  override def xor(a: HBit, b: HBit): HBit = (a, b) match {
+    case (HBit(i), HBit(j)) => HBit(en.homNand.fastxor((i ++ j).toArray).toVector)
+  }
+  override def not(a: HBit): HBit = a match {
+    case HBit(i) => HBit(en.homNand.fastnot(i.toArray).toVector)
+  }
+  override def mux(a: HBit, b: HBit, s: HBit): HBit = {
+    en nand (en nand (a, en nand (s, s)), en nand (b, s))
+  }
+
+  override def dmux(i: HBit, s: HBit): Vector[HBit] = {
+    val sn = en nand (s, s)
+    val i1n = en nand (i, sn)
+    val i2n = en nand (i, s)
+    Vector(en nand (i1n, i1n), en nand (i2n, i2n))
+  }
+
+  override def and16(a: Vector[HBit], b: Vector[HBit]): Vector[HBit] = {
+    (a zip b).map { case (b1, b2) => and(b1, b2) }
+  }
+
+  override def not16(a: Vector[HBit]): Vector[HBit] = {
+    a.map(not(_))
+  }
+
+  override def or16(a: Vector[HBit], b: Vector[HBit]): Vector[HBit] = {
+    (a zip b).map { case (b1, b2) => or(b1, b2) }
+  }
+
+  override def or8way(a: Vector[HBit]): HBit = {
+    val v0 = or(a(0), a(1))
+    val v1 = or(a(2), a(3))
+    val v2 = or(a(4), a(5))
+    val v3 = or(a(6), a(7))
+    val v4 = or(v0, v1)
+    val v5 = or(v2, v3)
+    or(v4, v5)
+  }
+
+  override def mux16(a: Vector[HBit], b: Vector[HBit], s: HBit): Vector[HBit] = {
+    (a zip b).map { case (b1, b2) => mux(b1, b2, s) }
+  }
+
+  override def mux4way16(
+    a: Vector[HBit], b: Vector[HBit],
+    c: Vector[HBit], d: Vector[HBit],
+    s: Vector[HBit]): Vector[HBit] = {
+    val w0 = mux16(a, b, s(0))
+    val w1 = mux16(c, d, s(0))
+    mux16(w0, w1, s(1))
+  }
+
+  override def mux8way16(
+    a: Vector[HBit], b: Vector[HBit],
+    c: Vector[HBit], d: Vector[HBit],
+    e: Vector[HBit], f: Vector[HBit],
+    g: Vector[HBit], h: Vector[HBit],
+    s: Vector[HBit]): Vector[HBit] = {
+    val w0 = mux4way16(a, b, c, d, s take 2)
+    val w1 = mux4way16(e, f, g, h, s take 2)
+    mux16(w0, w1, s(2))
+  }
+
+  override def dmux4way(in: HBit, s: Vector[HBit]): Vector[HBit] = {
+    val w = dmux(in, s(1))
+    val h0 = dmux(w(0), s(0))
+    val h1 = dmux(w(1), s(0))
+    Vector(h0(0), h0(1), h1(0), h1(1))
+  }
+
+  override def dmux8way(in: HBit, s: Vector[HBit]): Vector[HBit] = {
+    val w = dmux(in, s(2))
+    val h0 = dmux4way(w(0), s take 2)
+    val h1 = dmux4way(w(1), s take 2)
+    Vector(h0(0), h0(1), h0(2), h0(3), h1(0), h1(1), h1(2), h1(3))
   }
 }

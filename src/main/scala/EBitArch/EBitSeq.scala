@@ -1,8 +1,8 @@
 package HomNAND
 
-class EBitSeq(e: EBitNand) {
+class EBitSeq(e: EBitArith) {
 
-  val ea: EBitArith = new EBitArith(e)
+  val ea: EBitArith = e
   type T = ea.T
 
   def bit(s: ea.T, in: ea.T, load: ea.T): (ea.T, ea.T) = {

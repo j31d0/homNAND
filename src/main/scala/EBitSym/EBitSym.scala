@@ -112,5 +112,9 @@ case class SymXorBit(a: EBitSym, b: EBitSym) extends EBitSym {
 }
 
 class EFastCircuit {
-  @native def feval(f: Array[Boolean]): Array[Boolean]
+  @native def fastnand(f: Array[Boolean]): Array[Boolean]
+  @native def fastand(f: Array[Boolean]): Array[Boolean]
+  @native def fastor(f: Array[Boolean]): Array[Boolean]
+  @native def fastxor(f: Array[Boolean]): Array[Boolean]
+  @native def fastnot(f: Array[Boolean]): Array[Boolean]
 }

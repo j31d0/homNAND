@@ -11,6 +11,7 @@ ifeq ($(UNAME), Darwin)
 endif
 
 all:
+	javah -cp ../target/scala-2.11/classes/ HomNAND.EFastCircuit
 	gcc -shared -fPIC -Wall -O3 -I/usr/include/ -I$(JHOME)/include/ -I$(JHOME)/include/$(IPATH) HomNAND_EFastCircuit.c -o $(ONAME)
 
 

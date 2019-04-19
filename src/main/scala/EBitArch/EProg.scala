@@ -3,8 +3,8 @@ package HomNAND
 import java.nio.file.{Files, Paths, StandardOpenOption}
 import scala.annotation.tailrec
 
-class EProg(e: EBitNand) {
-  val ld: EBitLoader = new EBitLoader(e)
+class EProg(e: EBitLoader) {
+  val ld: EBitLoader = e
   type State = (
     Vector[ld.T],
     Vector[ld.T],
