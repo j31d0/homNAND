@@ -32,8 +32,8 @@ class EProg(e: EBitNand) {
       val rt = toInt16(nram.slice(13 * 16, 14 * 16))
       val rt2 = toInt16(nram.slice(12 * 16, 13 * 16))
       val mainRet = toInt16(nram.slice(8 * 16, 9 * 16))
-      val stack = if (sp < bp && (sp & 0x7000) != 0 && (bp & 0x7000) != 0) ram.slice( sp * 16, bp * 16 ).grouped(16).map(toInt16(_)).toList else List()
-      println(sp, bp, mainRet, stack, toInt16(npc))
+      // val stack = if (sp < bp && (sp & 0x7000) != 0 && (bp & 0x7000) != 0) ram.slice( sp * 16, bp * 16 ).grouped(16).map(toInt16(_)).toList else List()
+      println(sp, bp, mainRet, toInt16(npc))
       run((nrom, nram, na, nd, npc, nvalueM), c - 1)
     }
   }

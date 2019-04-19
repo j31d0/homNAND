@@ -21,6 +21,13 @@ object EncFactory {
   )).reduce(_ ++ _)
   }
 
+  def perm(k: Vector[EBitSym]): Vector[EBitSym] = {
+    val p = List(0, 5, 15, 10, 3, 1, 7, 12, 11, 8, 6, 2, 13, 14, 9, 4)
+    Vector.tabulate(16)((i) => k(p(i)))
+  }
+
+
+
   def isubstitution(k: Vector[EBitSym]): Vector[EBitSym] = {
     val p = List(4, 5, 11, 0, 15, 1, 10, 6, 9, 14, 3, 8, 7, 12, 13, 2)
     val sp = p.map((i) => genConst(i.toByte))
@@ -77,26 +84,25 @@ object EncFactory {
       mux16(w0, w1, s(3))
     }
 
-  def dec(a: Vector[EBitSym], key: Vector[EBitSym]) = {
+  def dec(a: Vector[EBitSym], key: Vector[EBitSym]) =  a /*{
     val k = isubstitution(a)
     val kb = (k zip key).map{ case (i, j) => i xor j}
     kb
-  }
-  def enc(da: Vector[EBitSym], key: Vector[EBitSym]) = {
+  }*/
+  def enc(da: Vector[EBitSym], key: Vector[EBitSym]) = da /*{
     val db = (da zip key).map{ case (i, j) => i xor j}
     val dk = substitution(db)
     dk
-  }
+  }*/
 
   def genHNand(key: Vector[EBitSym]): Vector[EBitSym] = {
     val a = Vector.tabulate(16)((n) => SymLocBit(n))
     val b = Vector.tabulate(16)((n) => SymLocBit(n + 16))
-    val enca = enc(a, key)
     val deca = dec(a, key)
     val decb = dec(b, key)
-    val o = ((deca take 15) zip (decb take 15)).map { case (i, j) => i xor j }
-    val p = deca(15) nand decb(15)
-    val decanb = o :+ p
+    val (ap, al) = (deca.head, deca.tail)
+    val (bp, bl) = (decb.head, decb.tail)
+    val decanb = perm((ap nand bp) +: (al zip bl).map{ case (i, j) => (i xor j) })
     enc(decanb, key)
   }
 }
@@ -111,7 +117,7 @@ object HBitNand extends EBitNand {
   val homNand = EncFactory.genHNand(EncFactory.genShort(key))
   val efalse: HBit = HBit(EncFactory.enc(EncFactory.genShort(31322.toShort), EncFactory.genShort(key)).map((f) => f.eval(Vector())))
   val etrue: HBit = HBit(EncFactory.enc(EncFactory.genShort(26585.toShort), EncFactory.genShort(key)).map((f) => f.eval(Vector())))
-  def apply(a: Boolean): T = HBit(Vector.tabulate(15)((n) => rseed.nextBoolean) :+ a)
+  def apply(a: Boolean): T = HBit(EncFactory.enc(Vector.tabulate(16)((n) => SymLocBit(n)), EncFactory.genShort(key)).map((f) => f.eval(a +: Vector.tabulate(15)((n) => rseed.nextBoolean))))
   def nand(a: HBit, b: HBit): HBit = (a, b) match {
     case (HBit(i), HBit(j)) => HBit(homNand.map(f => f.eval(i ++ j)))
   }

@@ -10,15 +10,16 @@ object Main {
     prog match {
       case Right(f) => {
         val outd = HBitNand.exportP(f.map(HBitNand(_)))
-        val outname = "examples/sample.mdes"
+        val outname = "examples/sample.mnd"
         Files.write(Paths.get(outname), outd, StandardOpenOption.CREATE)
       }
       case _ => ()
     }
     println("sample computer")
     val progEnv: EProg = new EProg(HBitNand)
-    val state = progEnv.initState("examples/sample.mdes")
-    val nextState = progEnv.run(state, 300)
+    val state = progEnv.initState("examples/sample.mnd")
+    val nextState = progEnv.run(state, 252)
+    progEnv.writeState("examples/sample.mnd.state", nextState)
     print("finish!")
 
     // EncFactory.test()
