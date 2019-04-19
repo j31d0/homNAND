@@ -1,6 +1,6 @@
 UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
-	JHOME := $($(dirname $(readlink $(which javac)))/javahome)
+	JHOME := $(shell dirname $(shell dirname $(shell readlink -f $(shell which javac))))
 	IPATH := linux
 	ONAME := libEFastCircuit.so
 endif
