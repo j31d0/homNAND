@@ -105,6 +105,14 @@ object EncFactory {
     val decanb = perm((ap nand bp) +: (al zip bl).map{ case (i, j) => (i xor j) })
     enc(decanb, key)
   }
+
+  def prepare(ex: Vector[EBitSym]) : EFastCircuit = {
+    val k = ex.map(_.toExpr)
+    (0 until k.length).foreach((i) => println(s"out[$i] = ${k(i)};"))
+    println(System.mapLibraryName("EFastCircuit"))
+    System.loadLibrary("EFastCircuit")
+    new EFastCircuit
+  }
 }
 
 
@@ -114,12 +122,12 @@ object HBitNand extends EBitNand {
   type T = HBit
   val key: Short = 0xfe92.toShort
   val rseed = Random
-  val homNand = EncFactory.genHNand(EncFactory.genShort(key))
+  val homNand = EncFactory.prepare(EncFactory.genHNand(EncFactory.genShort(key)))
   val efalse: HBit = HBit(EncFactory.enc(EncFactory.genShort(31322.toShort), EncFactory.genShort(key)).map((f) => f.eval(Vector())))
   val etrue: HBit = HBit(EncFactory.enc(EncFactory.genShort(26585.toShort), EncFactory.genShort(key)).map((f) => f.eval(Vector())))
   def apply(a: Boolean): T = HBit(EncFactory.enc(Vector.tabulate(16)((n) => SymLocBit(n)), EncFactory.genShort(key)).map((f) => f.eval(a +: Vector.tabulate(15)((n) => rseed.nextBoolean))))
   def nand(a: HBit, b: HBit): HBit = (a, b) match {
-    case (HBit(i), HBit(j)) => HBit(homNand.map(f => f.eval(i ++ j)))
+    case (HBit(i), HBit(j)) => HBit(homNand.feval((i ++ j).toArray).toVector)
   }
   def toByte(l: Vector[Boolean]): Byte = {
     (0 until 8).foldLeft(0){

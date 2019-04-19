@@ -5,12 +5,14 @@ sealed trait EBitSym {
   def nand(o: EBitSym): EBitSym
   def reduce: EBitSym
   def eval(f: Vector[Boolean]): Boolean
+  def toExpr: String
 }
 case class SymConstBit(v: Boolean) extends EBitSym {
   def xor(o: EBitSym) = if (v) SymNotBit(o).reduce else o
   def nand(o: EBitSym) = if (v) SymNotBit(o).reduce else o
   def reduce: EBitSym = this
   def eval(f: Vector[Boolean]) = v
+  def toExpr = if (v) "true" else "false"
 }
 case class SymLocBit(v: Int) extends EBitSym {
   def xor(o: EBitSym) = o match {
@@ -23,6 +25,7 @@ case class SymLocBit(v: Int) extends EBitSym {
   }
   def reduce: EBitSym = this
   def eval(f: Vector[Boolean]) = f(v)
+  def toExpr = s"in[$v]"
 }
 case class SymNotBit(a: EBitSym) extends EBitSym {
   def xor(o: EBitSym) = o match {
@@ -40,6 +43,7 @@ case class SymNotBit(a: EBitSym) extends EBitSym {
     case _ => this
   }
   def eval(f: Vector[Boolean]) = !a.eval(f)
+  def toExpr = s"(!${a.toExpr})"
 }
 case class SymAndBit(a: EBitSym, b: EBitSym) extends EBitSym {
   def xor(o: EBitSym) = o match {
@@ -61,6 +65,7 @@ case class SymAndBit(a: EBitSym, b: EBitSym) extends EBitSym {
     case _ => this
   }
   def eval(f: Vector[Boolean]) = a.eval(f) && b.eval(f)
+  def toExpr = s"(${a.toExpr} && ${b.toExpr})"
 }
 case class SymOrBit(a: EBitSym, b: EBitSym) extends EBitSym {
   def xor(o: EBitSym) = o match {
@@ -81,6 +86,7 @@ case class SymOrBit(a: EBitSym, b: EBitSym) extends EBitSym {
     case _ => this
   }
   def eval(f: Vector[Boolean]) = a.eval(f) || b.eval(f)
+  def toExpr = s"(${a.toExpr} || ${b.toExpr})"
 }
 case class SymXorBit(a: EBitSym, b: EBitSym) extends EBitSym {
   def xor(o: EBitSym) = o match {
@@ -102,4 +108,9 @@ case class SymXorBit(a: EBitSym, b: EBitSym) extends EBitSym {
     case _ => this
   }
   def eval(f: Vector[Boolean]) = a.eval(f) ^ b.eval(f)
+  def toExpr = s"(${a.toExpr} ^ ${b.toExpr})"
+}
+
+class EFastCircuit {
+  @native def feval(f: Array[Boolean]): Array[Boolean]
 }
