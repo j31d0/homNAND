@@ -80,16 +80,16 @@ object EncFactory {
     mux16(w0, w1, s(3))
   }
 
-  def dec(a: Vector[EBitSym], key: Vector[EBitSym]) = a /*{
+  def dec(a: Vector[EBitSym], key: Vector[EBitSym]) = {
     val k = isubstitution(a)
     val kb = (k zip key).map{ case (i, j) => i xor j}
     kb
-  }*/
-  def enc(da: Vector[EBitSym], key: Vector[EBitSym]) = da /*{
+  }
+  def enc(da: Vector[EBitSym], key: Vector[EBitSym]) = {
     val db = (da zip key).map{ case (i, j) => i xor j}
     val dk = substitution(db)
     dk
-  }*/
+  }
 
   def genHNand(key: Vector[EBitSym]): Vector[EBitSym] = {
     val a = Vector.tabulate(16)((n) => SymLocBit(n))
@@ -98,11 +98,12 @@ object EncFactory {
     val decb = dec(b, key)
     val (ap, al) = (deca.head, deca.tail)
     val (bp, bl) = (decb.head, decb.tail)
-    val decanb = (deca zip decb).map{case (i, j) => i nand j}// perm((ap nand bp) +: (al zip bl).map { case (i, j) => (i xor j) })
+    val decanb = perm((ap nand bp) +: (al zip bl).map { case (i, j) => (i xor j) })
     enc(decanb, key)
   }
 
   def prepare(ex: Vector[EBitSym]): EFastCircuit = {
+    println(ex)
     val k = ex.map(_.toExpr)
     val kl = k.length
     val k2 = kl * 2
@@ -256,72 +257,5 @@ object HBitLogic extends EBitLogic(HBitNand) {
   }
   override def mux(a: HBit, b: HBit, s: HBit): HBit = {
     en nand (en nand (a, en nand (s, s)), en nand (b, s))
-  }
-
-  override def dmux(i: HBit, s: HBit): Vector[HBit] = {
-    val sn = en nand (s, s)
-    val i1n = en nand (i, sn)
-    val i2n = en nand (i, s)
-    Vector(en nand (i1n, i1n), en nand (i2n, i2n))
-  }
-
-  override def and16(a: Vector[HBit], b: Vector[HBit]): Vector[HBit] = {
-    (a zip b).map { case (b1, b2) => and(b1, b2) }
-  }
-
-  override def not16(a: Vector[HBit]): Vector[HBit] = {
-    a.map(not(_))
-  }
-
-  override def or16(a: Vector[HBit], b: Vector[HBit]): Vector[HBit] = {
-    (a zip b).map { case (b1, b2) => or(b1, b2) }
-  }
-
-  override def or8way(a: Vector[HBit]): HBit = {
-    val v0 = or(a(0), a(1))
-    val v1 = or(a(2), a(3))
-    val v2 = or(a(4), a(5))
-    val v3 = or(a(6), a(7))
-    val v4 = or(v0, v1)
-    val v5 = or(v2, v3)
-    or(v4, v5)
-  }
-
-  override def mux16(a: Vector[HBit], b: Vector[HBit], s: HBit): Vector[HBit] = {
-    (a zip b).map { case (b1, b2) => mux(b1, b2, s) }
-  }
-
-  override def mux4way16(
-    a: Vector[HBit], b: Vector[HBit],
-    c: Vector[HBit], d: Vector[HBit],
-    s: Vector[HBit]): Vector[HBit] = {
-    val w0 = mux16(a, b, s(0))
-    val w1 = mux16(c, d, s(0))
-    mux16(w0, w1, s(1))
-  }
-
-  override def mux8way16(
-    a: Vector[HBit], b: Vector[HBit],
-    c: Vector[HBit], d: Vector[HBit],
-    e: Vector[HBit], f: Vector[HBit],
-    g: Vector[HBit], h: Vector[HBit],
-    s: Vector[HBit]): Vector[HBit] = {
-    val w0 = mux4way16(a, b, c, d, s take 2)
-    val w1 = mux4way16(e, f, g, h, s take 2)
-    mux16(w0, w1, s(2))
-  }
-
-  override def dmux4way(in: HBit, s: Vector[HBit]): Vector[HBit] = {
-    val w = dmux(in, s(1))
-    val h0 = dmux(w(0), s(0))
-    val h1 = dmux(w(1), s(0))
-    Vector(h0(0), h0(1), h1(0), h1(1))
-  }
-
-  override def dmux8way(in: HBit, s: Vector[HBit]): Vector[HBit] = {
-    val w = dmux(in, s(2))
-    val h0 = dmux4way(w(0), s take 2)
-    val h1 = dmux4way(w(1), s take 2)
-    Vector(h0(0), h0(1), h0(2), h0(3), h1(0), h1(1), h1(2), h1(3))
   }
 }

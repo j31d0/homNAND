@@ -62,6 +62,8 @@ case class SymAndBit(a: EBitSym, b: EBitSym) extends EBitSym {
     case (SymConstBit(false), _) => SymConstBit(false)
     case (_, SymConstBit(true)) => a
     case (_, SymConstBit(false)) => SymConstBit(false)
+    case (SymNotBit(a), b) if a == b => SymConstBit(false)
+    case (a, SymNotBit(b)) if a == b => SymConstBit(false)
     case _ => this
   }
   def eval(f: Vector[Boolean]) = a.eval(f) && b.eval(f)
@@ -83,6 +85,24 @@ case class SymOrBit(a: EBitSym, b: EBitSym) extends EBitSym {
     case (SymConstBit(false), _) => b
     case (_, SymConstBit(true)) => SymConstBit(true)
     case (_, SymConstBit(false)) => a
+    case (SymNotBit(a), b) if a == b => SymConstBit(true)
+    case (a, SymNotBit(b)) if a == b => SymConstBit(true)
+    case (SymAndBit(SymNotBit(a), b), SymAndBit(c, d)) if a == c && b == d => b
+    case (SymAndBit(SymNotBit(a), b), SymAndBit(c, d)) if a == d && b == c => b
+    case (SymAndBit(a, SymNotBit(b)), SymAndBit(c, d)) if a == c && b == d => a
+    case (SymAndBit(a, SymNotBit(b)), SymAndBit(c, d)) if a == d && b == c => a
+    case (SymAndBit(a, b), SymAndBit(SymNotBit(c), d)) if a == c && b == d => d
+    case (SymAndBit(a, b), SymAndBit(SymNotBit(c), d)) if a == d && b == c => d
+    case (SymAndBit(a, b), SymAndBit(c, SymNotBit(d))) if a == c && b == d => c
+    case (SymAndBit(a, b), SymAndBit(c, SymNotBit(d))) if a == d && b == c => c
+    case (SymAndBit(SymNotBit(a), b), SymAndBit(SymNotBit(c), d)) if a == d && b == c => SymXorBit(a, b)
+    case (SymAndBit(a, SymNotBit(b)), SymAndBit(SymNotBit(c), d)) if a == c && b == d => SymXorBit(a, b)
+    case (SymAndBit(SymNotBit(a), b), SymAndBit(c, SymNotBit(d))) if a == c && b == d => SymXorBit(a, b)
+    case (SymAndBit(a, SymNotBit(b)), SymAndBit(c, SymNotBit(d))) if a == d && b == c => SymXorBit(a, b)
+    case (SymAndBit(SymNotBit(a), SymNotBit(b)), SymAndBit(c, d)) if a == d && b == c => SymNotBit(SymXorBit(a, b))
+    case (SymAndBit(SymNotBit(a), SymNotBit(b)), SymAndBit(c, d)) if a == c && b == d => SymNotBit(SymXorBit(a, b))
+    case (SymAndBit(a, b), SymAndBit(SymNotBit(c), SymNotBit(d))) if a == d && b == c => SymNotBit(SymXorBit(a, b))
+    case (SymAndBit(a, b), SymAndBit(SymNotBit(c), SymNotBit(d))) if a == c && b == d => SymNotBit(SymXorBit(a, b))
     case _ => this
   }
   def eval(f: Vector[Boolean]) = a.eval(f) || b.eval(f)
@@ -105,6 +125,12 @@ case class SymXorBit(a: EBitSym, b: EBitSym) extends EBitSym {
     case (SymConstBit(false), _) => b
     case (_, SymConstBit(true)) => SymNotBit(a)
     case (_, SymConstBit(false)) => a
+    case (SymNotBit(a), b) if a == b => SymConstBit(true)
+    case (a, SymNotBit(b)) if a == b => SymConstBit(true)
+    case (SymAndBit(a, b), SymAndBit(c, d)) if a == c => SymAndBit(a, SymXorBit(b, d))
+    case (SymAndBit(a, b), SymAndBit(c, d)) if a == d => SymAndBit(a, SymXorBit(b, c))
+    case (SymAndBit(a, b), SymAndBit(c, d)) if b == c => SymAndBit(b, SymXorBit(a, d))
+    case (SymAndBit(a, b), SymAndBit(c, d)) if b == d => SymAndBit(b, SymXorBit(a, c))
     case _ => this
   }
   def eval(f: Vector[Boolean]) = a.eval(f) ^ b.eval(f)
