@@ -1,6 +1,7 @@
 package HomNAND
 import scala.util.Random
 import java.io._
+import scala.io.Source
 import sys.process._
 
 object EncFactory {
@@ -105,93 +106,14 @@ object EncFactory {
   def prepare(ex: Vector[EBitSym]): EFastCircuit = {
     println(ex)
     val k = ex.map(_.toExpr)
+    val tmpString = Source.fromFile("./libcircuit/HomNAND_EFastCircuit_template.c").mkString
     val kl = k.length
-    val k2 = kl * 2
+    val circuit = (0 until k.length).map((i) => s"out[$i] = ${k(i)};\n").reduce(_ + _)
+    val newString = tmpString.replace("$N", kl.toString).replace("$Circuit", circuit)
     val writer = new PrintWriter(new File("./libcircuit/HomNAND_EFastCircuit.c"))
-    val templates = List("#include \"HomNAND_EFastCircuit.h\"",
-      "#include <string.h>",
-      "static void fastnand(jboolean in[], jboolean out[]) {")
-    val templatef = List(
-      "}",
-      "JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastnand",
-      "  (JNIEnv * env, jobject obj, jbooleanArray arr) {",
-      "jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);",
-      s"jboolean out[${kl}];",
-      "fastnand(in, out);",
-      s"jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,${kl});",
-      "(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);",
-      s"(*env)->SetBooleanArrayRegion(env,outp,0,${kl},(jboolean*)(&out));",
-      "return outp;",
-      "}",
-      "JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastand",
-      "  (JNIEnv * env, jobject obj, jbooleanArray arr) {",
-      "jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);",
-      s"jboolean out[${k2}];",
-      s"jboolean out2[${kl}];",
-      "fastnand(in, out);",
-      s"memcpy(&out[${kl}], out, ${kl} * sizeof(jboolean));",
-      "fastnand(out, out2);",
-      s"jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,${kl});",
-      "(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);",
-      s"(*env)->SetBooleanArrayRegion(env,outp,0,${kl},(jboolean*)(&out2));",
-      "return outp;",
-      "}",
-      "JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastor",
-      "  (JNIEnv * env, jobject obj, jbooleanArray arr) {",
-      "jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);",
-      s"jboolean ina[${k2}];",
-      s"jboolean inb[${k2}];",
-      s"jboolean out[${k2}];",
-      s"jboolean out2[${kl}];",
-      s"memcpy(&ina[0], &in[0], ${kl} * sizeof(jboolean));",
-      s"memcpy(&ina[${kl}], &in[0], ${kl} * sizeof(jboolean));",
-      s"memcpy(&inb[0], &in[${kl}], ${kl} * sizeof(jboolean));",
-      s"memcpy(&inb[${kl}], &in[${kl}], ${kl} * sizeof(jboolean));",
-      "fastnand(ina, &out[0]);",
-      s"fastnand(inb, &out[${kl}]);",
-      "fastnand(out, out2);",
-      s"jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,${kl});",
-      "(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);",
-      s"(*env)->SetBooleanArrayRegion(env,outp,0,${kl},(jboolean*)(&out2));",
-      "return outp;",
-      "}",
-      "JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastxor",
-      "  (JNIEnv * env, jobject obj, jbooleanArray arr) {",
-      "jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);",
-      s"jboolean ab1[${k2}];",
-      s"jboolean ab2[${k2}];",
-      s"jboolean out[${kl}];",
-      "fastnand(in, ab1);",
-      s"memcpy(&ab1[${kl}], &in[0], ${kl} * sizeof(jboolean));",
-      "fastnand(ab1, &ab2[0]);",
-      s"memcpy(&ab1[${kl}], &in[${kl}], ${kl} * sizeof(jboolean));",
-      s"fastnand(ab1, &ab2[${kl}]);",
-      "fastnand(ab2, out);",
-      s"jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,${kl});",
-      "(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);",
-      s"(*env)->SetBooleanArrayRegion(env,outp,0,${kl},(jboolean*)(&out));",
-      "return outp;",
-      "}",
-      "JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastnot",
-      "  (JNIEnv * env, jobject obj, jbooleanArray arr) {",
-      "jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);",
-      s"jboolean a1[${k2}];",
-      s"jboolean out[${kl}];",
-      s"memcpy(&a1[0], &in[0], ${kl} * sizeof(jboolean));",
-      s"memcpy(&a1[${kl}], &in[0], ${kl} * sizeof(jboolean));",
-      "fastnand(a1, out);",
-      s"jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,${kl});",
-      "(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);",
-      s"(*env)->SetBooleanArrayRegion(env,outp,0,${kl},(jboolean*)(&out));",
-      "return outp;",
-      "}"
-    )
-    templates.foreach((i) => writer.println(i))
-    (0 until k.length).foreach((i) => writer.println(s"out[$i] = ${k(i)};"))
-    templatef.foreach((i) => writer.println(i))
+    writer.print(newString)
     writer.close()
     "make -C libcircuit".!
-    println(System.mapLibraryName("EFastCircuit"))
     System.loadLibrary("EFastCircuit")
     new EFastCircuit
   }
