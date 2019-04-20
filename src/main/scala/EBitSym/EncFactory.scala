@@ -99,7 +99,7 @@ object EncFactory {
     val decb = dec(b, key)
     val (ap, al) = (deca.head, deca.tail)
     val (bp, bl) = (decb.head, decb.tail)
-    val decanb = (deca zip decb).map{case (i, j) => i nand j}//perm((ap nand bp) +: (al zip bl).map { case (i, j) => (i xor j) })
+    val decanb = (deca zip decb).map { case (i, j) => i nand j } //perm((ap nand bp) +: (al zip bl).map { case (i, j) => (i xor j) })
     enc(decanb, key)
   }
 
@@ -178,8 +178,66 @@ object HBitLogic extends EBitLogic(HBitNand) {
   override def not(a: HBit): HBit = a match {
     case HBit(i) => HBit(en.homNand.fastnot(i.toArray).toVector)
   }
-  override def mux(a: HBit, b: HBit, s: HBit): HBit =  (a, b, s) match {
+  override def mux(a: HBit, b: HBit, s: HBit): HBit = (a, b, s) match {
     case (HBit(i), HBit(j), HBit(k)) => HBit(en.homNand.fastmux((i ++ j ++ k).toArray).toVector)
+  }
+
+  override def mux16(a: Vector[HBit], b: Vector[HBit], s: HBit): Vector[HBit] = {
+    val ao = a.map { case HBit(i) => i }.reduce(_ ++ _)
+    val bo = b.map { case HBit(i) => i }.reduce(_ ++ _)
+    val f = (en.homNand.fastmux16((ao ++ bo ++ s.v).toArray).toVector grouped en.bsize).map(HBit(_)).toVector
+    f
+  }
+
+  override def mux4way16(
+    a: Vector[en.T], b: Vector[en.T],
+    c: Vector[en.T], d: Vector[en.T],
+    s: Vector[en.T]): Vector[en.T] = {
+
+    val av = a.map { case HBit(i) => i }.reduce(_ ++ _)
+    val bv = b.map { case HBit(i) => i }.reduce(_ ++ _)
+    val cv = c.map { case HBit(i) => i }.reduce(_ ++ _)
+    val dv = d.map { case HBit(i) => i }.reduce(_ ++ _)
+    val sv = s.map { case HBit(i) => i }.reduce(_ ++ _)
+
+    val f = (en.homNand.fastmux4way16((av ++ bv ++ cv ++ dv ++ sv).toArray).toVector grouped en.bsize).map(HBit(_)).toVector
+    f
+  }
+
+  override def mux8way16(
+    a: Vector[en.T], b: Vector[en.T],
+    c: Vector[en.T], d: Vector[en.T],
+    e: Vector[en.T], f: Vector[en.T],
+    g: Vector[en.T], h: Vector[en.T],
+    s: Vector[en.T]): Vector[en.T] = {
+
+    val av = a.map { case HBit(i) => i }.reduce(_ ++ _)
+    val bv = b.map { case HBit(i) => i }.reduce(_ ++ _)
+    val cv = c.map { case HBit(i) => i }.reduce(_ ++ _)
+    val dv = d.map { case HBit(i) => i }.reduce(_ ++ _)
+
+    val ev = e.map { case HBit(i) => i }.reduce(_ ++ _)
+    val fv = f.map { case HBit(i) => i }.reduce(_ ++ _)
+    val gv = g.map { case HBit(i) => i }.reduce(_ ++ _)
+    val hv = h.map { case HBit(i) => i }.reduce(_ ++ _)
+    val sv = s.map { case HBit(i) => i }.reduce(_ ++ _)
+
+    val res = (en.homNand.fastmux8way16((av ++ bv ++ cv ++ dv ++ sv).toArray).toVector grouped en.bsize).map(HBit(_)).toVector
+    res
+  }
+
+  override def dmux4way(in: en.T, s: Vector[en.T]): Vector[en.T] = {
+    val w = dmux(in, s(1))
+    val h0 = dmux(w(0), s(0))
+    val h1 = dmux(w(1), s(0))
+    Vector(h0(0), h0(1), h1(0), h1(1))
+  }
+
+  override def dmux8way(in: en.T, s: Vector[en.T]): Vector[en.T] = {
+    val w = dmux(in, s(2))
+    val h0 = dmux4way(w(0), s take 2)
+    val h1 = dmux4way(w(1), s take 2)
+    Vector(h0(0), h0(1), h0(2), h0(3), h1(0), h1(1), h1(2), h1(3))
   }
 }
 
@@ -198,15 +256,14 @@ object HBitSeq extends EBitSeq(HBitArith) {
   }
   override def reg(s: Vector[HBit], in: Vector[HBit], load: HBit): (Vector[HBit], Vector[HBit]) = (s, in, load) match {
     case (_, _, HBit(k)) => {
-      val so = s.map{ case HBit(i) => i}.reduce(_ ++ _)
-      val ino = in.map{ case HBit(i) => i}.reduce(_ ++ _)
+      val so = s.map { case HBit(i) => i }.reduce(_ ++ _)
+      val ino = in.map { case HBit(i) => i }.reduce(_ ++ _)
       val f = (ea.el.en.homNand.fastreg((so ++ ino ++ k).toArray).toVector grouped ea.el.en.bsize).map(HBit(_)).toVector
       val fv = (f grouped 16).toVector
       // (ea.el mux (s, in, load), s)
       (fv(0), fv(1))
     }
   }
-
 
 }
 
