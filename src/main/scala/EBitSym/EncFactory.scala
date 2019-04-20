@@ -232,18 +232,16 @@ object HBitLogic extends EBitLogic(HBitNand) {
 
   override def dmux4way(in: HBit, s: Vector[HBit]): Vector[HBit] = {
     val sv = s.map { case HBit(i) => i }.reduce(_ ++ _)
-    val w = dmux(in, s(1))
-    val h0 = dmux(w(0), s(0))
-    val h1 = dmux(w(1), s(0))
-    Vector(h0(0), h0(1), h1(0), h1(1))
-      (en.homNand.fastdmux4way((in.v ++ sv).toArray).toVector grouped en.bsize).map(HBit(_)).toVector
+    (en.homNand.fastdmux4way((in.v ++ sv).toArray).toVector grouped en.bsize).map(HBit(_)).toVector
   }
 
-  override def dmux8way(in: en.T, s: Vector[en.T]): Vector[en.T] = {
+  override def dmux8way(in: HBit, s: Vector[HBit]): Vector[HBit] = {
+    val sv = s.map { case HBit(i) => i }.reduce(_ ++ _)
     val w = dmux(in, s(2))
     val h0 = dmux4way(w(0), s take 2)
     val h1 = dmux4way(w(1), s take 2)
     Vector(h0(0), h0(1), h0(2), h0(3), h1(0), h1(1), h1(2), h1(3))
+    (en.homNand.fastdmux8way((in.v ++ sv).toArray).toVector grouped en.bsize).map(HBit(_)).toVector
   }
 }
 
