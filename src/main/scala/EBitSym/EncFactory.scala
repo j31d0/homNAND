@@ -199,7 +199,7 @@ object HBitSeq extends EBitSeq(HBitArith) {
   override def reg(s: Vector[HBit], in: Vector[HBit], load: HBit): (Vector[HBit], Vector[HBit]) = (s, in, load) match {
     case (_, _, HBit(k)) => {
       val so = s.map{ case HBit(i) => i}.reduce(_ ++ _)
-      val ino = s.map{ case HBit(i) => i}.reduce(_ ++ _)
+      val ino = in.map{ case HBit(i) => i}.reduce(_ ++ _)
       val f = (ea.el.en.homNand.fastreg((so ++ ino ++ k).toArray).toVector grouped ea.el.en.bsize).map(HBit(_)).toVector
       val fv = (f grouped 16).toVector
       // (ea.el mux (s, in, load), s)
