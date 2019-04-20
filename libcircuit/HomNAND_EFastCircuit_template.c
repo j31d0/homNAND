@@ -1,5 +1,6 @@
 #include "HomNAND_EFastCircuit.h"
 #include <string.h>
+#include <stdlib.h>
 #define N $N
 #define N2 ($N * 2)
 
@@ -194,7 +195,79 @@ static void fastreg(jboolean in[], jboolean out[]) {
   }
   memcpy(&out[N * 16], in, N * 16 * sizeof(jboolean));
 }
-
+static void fastram8(jboolean in[], jboolean out[]) {
+  jboolean *addr = &in[128 * N + 16 * N + N];
+  jboolean *load = &in[128 * N + 16 * N];
+  jboolean *data = &in[128 * N];
+  jboolean loads[8 * N];
+  fastdmux8way(load, loads);
+  int i = 0;
+  jboolean tmp[32 * N + N];
+  jboolean outt[32 * N];
+  jboolean m816[128 * N + 3 * N];
+  for(i = 0; i < 8; i ++) {
+    memcpy(tmp, &in[i * 16 * N], 16 * N * sizeof(jboolean));
+    memcpy(&tmp[16 * N], data, 16 * N * sizeof(jboolean));
+    memcpy(&tmp[32 * N], &loads[i * N], N * sizeof(jboolean));
+    fastreg(tmp, outt);
+    memcpy(&out[16 * i * N], outt, 16 * N * sizeof(jboolean));
+    memcpy(&m816[16 * i * N], &outt[16 * N], 16 * N * sizeof(jboolean));
+  }
+  memcpy(&m816[128 * N], addr, 3 * N * sizeof(jboolean));
+  fastmux8way16(m816, &out[128 * N]);
+}
+static void fastram64(jboolean in[], jboolean out[]) {
+  jboolean *addlow = &in[1024 * N + 16 * N + N];
+  jboolean *addhigh = &in[1024 * N + 16 * N + N + 3 * N];
+  jboolean *load = &in[1024 * N + 16 * N];
+  jboolean *data = &in[1024 * N];
+  jboolean mtemp[N + 3 * N];
+  memcpy(mtemp, load, N * sizeof(jboolean));
+  memcpy(&mtemp[N], addhigh, 3 * N * sizeof(jboolean));
+  jboolean loads[8 * N];
+  fastdmux8way(mtemp, loads);
+  int i = 0;
+  jboolean tmp[128 * N + 16 * N + N + 3 * N];
+  jboolean outt[128 * N + 16 * N];
+  jboolean m816[128 * N + 3 * N];
+  for(i = 0; i < 8; i ++) {
+    memcpy(tmp, &in[i * 128 * N], 128 * N * sizeof(jboolean));
+    memcpy(&tmp[128 * N], data, 16 * N * sizeof(jboolean));
+    memcpy(&tmp[128 * N + 16 * N], &loads[i * N], N * sizeof(jboolean));
+    memcpy(&tmp[128 * N + 16 * N + N], addlow, 3 * N * sizeof(jboolean));
+    fastram8(tmp, outt);
+    memcpy(&out[128 * i * N], outt, 128 * N * sizeof(jboolean));
+    memcpy(&m816[16 * i * N], &outt[128 * N], 16 * N * sizeof(jboolean));
+  }
+  memcpy(&m816[128 * N], addhigh, 3 * N * sizeof(jboolean));
+  fastmux8way16(m816, &out[1024 * N]);
+}
+static void fastram512(jboolean in[], jboolean out[]) {
+  jboolean *addlow = &in[8192 * N + 16 * N + N];
+  jboolean *addhigh = &in[8192 * N + 16 * N + N + 6 * N];
+  jboolean *load = &in[8192 * N + 16 * N];
+  jboolean *data = &in[8192 * N];
+  jboolean mtemp[N + 3 * N];
+  memcpy(mtemp, load, N * sizeof(jboolean));
+  memcpy(&mtemp[N], addhigh, 3 * N * sizeof(jboolean));
+  jboolean loads[8 * N];
+  fastdmux8way(mtemp, loads);
+  int i = 0;
+  jboolean tmp[1024 * N + 16 * N + N + 6 * N];
+  jboolean outt[1024 * N + 16 * N];
+  jboolean m816[128 * N + 3 * N];
+  for(i = 0; i < 8; i ++) {
+    memcpy(tmp, &in[i * 1024 * N], 1024 * N * sizeof(jboolean));
+    memcpy(&tmp[1024 * N], data, 16 * N * sizeof(jboolean));
+    memcpy(&tmp[1024 * N + 16 * N], &loads[i * N], N * sizeof(jboolean));
+    memcpy(&tmp[1024 * N + 16 * N + N], addlow, 6 * N * sizeof(jboolean));
+    fastram64(tmp, outt);
+    memcpy(&out[1024 * i * N], outt, 1024 * N * sizeof(jboolean));
+    memcpy(&m816[16 * i * N], &outt[1024 * N], 16 * N * sizeof(jboolean));
+  }
+  memcpy(&m816[128 * N], addhigh, 3 * N * sizeof(jboolean));
+  fastmux8way16(m816, &out[8192 * N]);
+}
 JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastnand
   (JNIEnv * env, jobject obj, jbooleanArray arr) {
 jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);
@@ -363,5 +436,35 @@ fastreg(in, out);
 jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,N * 32);
 (*env)->ReleaseBooleanArrayElements(env, arr, in, 0);
 (*env)->SetBooleanArrayRegion(env,outp,0,N * 32,(jboolean*)(&out));
+return outp;
+}
+JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastram8
+  (JNIEnv * env, jobject obj, jbooleanArray arr) {
+jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);
+jboolean out[N * 128 + N * 16];
+fastram8(in, out);
+jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,N * 128 + N * 16);
+(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);
+(*env)->SetBooleanArrayRegion(env,outp,0,N * 128 + N * 16,(jboolean*)(&out));
+return outp;
+}
+JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastram64
+  (JNIEnv * env, jobject obj, jbooleanArray arr) {
+jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);
+jboolean out[N * 1024 + N * 16];
+fastram64(in, out);
+jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,N * 1024 + N * 16);
+(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);
+(*env)->SetBooleanArrayRegion(env,outp,0,N * 1024 + N * 16,(jboolean*)(&out));
+return outp;
+}
+JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastram512
+  (JNIEnv * env, jobject obj, jbooleanArray arr) {
+jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);
+jboolean out[N * 8192 + N * 16];
+fastram512(in, out);
+jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,N * 8192 + N * 16);
+(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);
+(*env)->SetBooleanArrayRegion(env,outp,0,N * 8192 + N * 16,(jboolean*)(&out));
 return outp;
 }

@@ -81,16 +81,16 @@ object EncFactory {
     mux16(w0, w1, s(3))
   }
 
-  def dec(a: Vector[EBitSym], key: Vector[EBitSym]) = a /*{
+  def dec(a: Vector[EBitSym], key: Vector[EBitSym]) = {
     val k = isubstitution(a)
     val kb = (k zip key).map{ case (i, j) => i xor j}
     kb
-  }*/
-  def enc(da: Vector[EBitSym], key: Vector[EBitSym]) = da /*{
+  }
+  def enc(da: Vector[EBitSym], key: Vector[EBitSym]) = {
     val db = (da zip key).map{ case (i, j) => i xor j}
     val dk = substitution(db)
     dk
-  }*/
+  }
 
   def genHNand(key: Vector[EBitSym]): Vector[EBitSym] = {
     val a = Vector.tabulate(16)((n) => SymLocBit(n))
@@ -99,7 +99,7 @@ object EncFactory {
     val decb = dec(b, key)
     val (ap, al) = (deca.head, deca.tail)
     val (bp, bl) = (decb.head, decb.tail)
-    val decanb = (deca zip decb).map { case (i, j) => i nand j } //perm((ap nand bp) +: (al zip bl).map { case (i, j) => (i xor j) })
+    val decanb = perm((ap nand bp) +: (al zip bl).map { case (i, j) => (i xor j) })
     enc(decanb, key)
   }
 
@@ -269,6 +269,43 @@ object HBitSeq extends EBitSeq(HBitArith) {
       (fv(0), fv(1))
     }
   }
+
+
+  override def ram8(
+    s: Vector[HBit], in: Vector[HBit],
+    load: HBit, address: Vector[HBit]): (Vector[HBit], Vector[HBit]) = {
+      // so : 128 * 16
+      val so = s.map{ case HBit(i) => i }.reduce( _ ++ _ )
+      val ino = in.map{ case HBit(i) => i }.reduce(_ ++ _)
+      val ado = address.map{ case HBit(i) => i}.reduce(_ ++ _)
+      val f = (ea.el.en.homNand.fastram8((so ++ ino ++ load.v ++ ado).toArray).toVector grouped ea.el.en.bsize).map(HBit(_)).toVector
+      val fv = (f grouped 128).toVector
+      (fv(0), fv(1))
+    }
+
+  override def ram64(
+    s: Vector[HBit], in: Vector[HBit],
+    load: HBit, address: Vector[HBit]): (Vector[HBit], Vector[HBit]) = {
+      // so : 1024 * 16
+      val so = s.map{ case HBit(i) => i }.reduce( _ ++ _ )
+      val ino = in.map{ case HBit(i) => i }.reduce(_ ++ _)
+      val ado = address.map{ case HBit(i) => i}.reduce(_ ++ _)
+      val f = (ea.el.en.homNand.fastram64((so ++ ino ++ load.v ++ ado).toArray).toVector grouped ea.el.en.bsize).map(HBit(_)).toVector
+      val fv = (f grouped 1024).toVector
+      (fv(0), fv(1))
+    }
+
+  override def ram512(
+    s: Vector[HBit], in: Vector[HBit],
+    load: HBit, address: Vector[HBit]): (Vector[HBit], Vector[HBit]) = {
+      // so : 8192 * 16
+      val so = s.map{ case HBit(i) => i }.reduce( _ ++ _ )
+      val ino = in.map{ case HBit(i) => i }.reduce(_ ++ _)
+      val ado = address.map{ case HBit(i) => i}.reduce(_ ++ _)
+      val f = (ea.el.en.homNand.fastram512((so ++ ino ++ load.v ++ ado).toArray).toVector grouped ea.el.en.bsize).map(HBit(_)).toVector
+      val fv = (f grouped 8192).toVector
+      (fv(0), fv(1))
+    }
 
   override def rom8(s: Vector[HBit], address: Vector[HBit]): Vector[HBit] = {
     val sv = s.map { case HBit(i) => i }.reduce(_ ++ _)
