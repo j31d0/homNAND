@@ -81,16 +81,16 @@ object EncFactory {
     mux16(w0, w1, s(3))
   }
 
-  def dec(a: Vector[EBitSym], key: Vector[EBitSym]) = {
+  def dec(a: Vector[EBitSym], key: Vector[EBitSym]) = a /*{
     val k = isubstitution(a)
     val kb = (k zip key).map{ case (i, j) => i xor j}
     kb
-  }
-  def enc(da: Vector[EBitSym], key: Vector[EBitSym]) = {
+  }*/
+  def enc(da: Vector[EBitSym], key: Vector[EBitSym]) = da /*{
     val db = (da zip key).map{ case (i, j) => i xor j}
     val dk = substitution(db)
     dk
-  }
+  }*/
 
   def genHNand(key: Vector[EBitSym]): Vector[EBitSym] = {
     val a = Vector.tabulate(16)((n) => SymLocBit(n))
@@ -99,7 +99,7 @@ object EncFactory {
     val decb = dec(b, key)
     val (ap, al) = (deca.head, deca.tail)
     val (bp, bl) = (decb.head, decb.tail)
-    val decanb = perm((ap nand bp) +: (al zip bl).map { case (i, j) => (i xor j) })
+    val decanb = (deca zip decb).map{case (i, j) => i nand j}//perm((ap nand bp) +: (al zip bl).map { case (i, j) => (i xor j) })
     enc(decanb, key)
   }
 
@@ -123,12 +123,13 @@ case class HBit(v: Vector[Boolean])
 
 object HBitNand extends EBitNand {
   type T = HBit
+  val bsize = 16
   val key: Short = 0xfe92.toShort
   val rseed = Random
   val homNand = EncFactory.prepare(EncFactory.genHNand(EncFactory.genShort(key)))
   val efalse: HBit = HBit(EncFactory.enc(EncFactory.genShort(31322.toShort), EncFactory.genShort(key)).map((f) => f.eval(Vector())))
   val etrue: HBit = HBit(EncFactory.enc(EncFactory.genShort(26585.toShort), EncFactory.genShort(key)).map((f) => f.eval(Vector())))
-  def apply(a: Boolean): T = HBit(EncFactory.enc(Vector.tabulate(16)((n) => SymLocBit(n)), EncFactory.genShort(key)).map((f) => f.eval(a +: Vector.tabulate(15)((n) => rseed.nextBoolean))))
+  def apply(a: Boolean): T = HBit(EncFactory.enc(Vector.tabulate(bsize)((n) => SymLocBit(n)), EncFactory.genShort(key)).map((f) => f.eval(a +: Vector.tabulate(bsize - 1)((n) => rseed.nextBoolean))))
   def nand(a: HBit, b: HBit): HBit = (a, b) match {
     case (HBit(i), HBit(j)) => HBit(homNand.fastnand((i ++ j).toArray).toVector)
   }
@@ -188,6 +189,25 @@ object HBitArith extends EBitArith(HBitLogic) {
 
 object HBitSeq extends EBitSeq(HBitArith) {
   override val ea = HBitArith
+  override def bit(s: HBit, in: HBit, load: HBit): (HBit, HBit) = (s, in, load) match {
+    case (HBit(i), HBit(j), HBit(k)) => {
+      val f = (ea.el.en.homNand.fastbit((i ++ j ++ k).toArray).toVector grouped ea.el.en.bsize).map(HBit(_)).toVector
+      // (ea.el mux (s, in, load), s)
+      (f(0), f(1))
+    }
+  }
+  override def reg(s: Vector[HBit], in: Vector[HBit], load: HBit): (Vector[HBit], Vector[HBit]) = (s, in, load) match {
+    case (_, _, HBit(k)) => {
+      val so = s.map{ case HBit(i) => i}.reduce(_ ++ _)
+      val ino = s.map{ case HBit(i) => i}.reduce(_ ++ _)
+      val f = (ea.el.en.homNand.fastreg((so ++ ino ++ k).toArray).toVector grouped ea.el.en.bsize).map(HBit(_)).toVector
+      val fv = (f grouped 16).toVector
+      // (ea.el mux (s, in, load), s)
+      (fv(0), fv(1))
+    }
+  }
+
+
 }
 
 object HBitComputer extends EBitComputer(HBitSeq) {
