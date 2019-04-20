@@ -226,6 +226,14 @@ object HBitLogic extends EBitLogic(HBitNand) {
     res
   }
 
+  override def dmux(i: HBit, s: HBit): Vector[HBit] = {
+    val sn = en nand (s, s)
+    val i1n = en nand (i, sn)
+    val i2n = en nand (i, s)
+    Vector(en nand (i1n, i1n), en nand (i2n, i2n))
+    (en.homNand.fastdmux((i.v ++ s.v).toArray).toVector grouped en.bsize).map(HBit(_)).toVector
+  }
+
   override def dmux4way(in: en.T, s: Vector[en.T]): Vector[en.T] = {
     val w = dmux(in, s(1))
     val h0 = dmux(w(0), s(0))
