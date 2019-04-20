@@ -177,7 +177,7 @@ object HBitLogic extends EBitLogic(HBitNand) {
   override def not(a: HBit): HBit = a match {
     case HBit(i) => HBit(en.homNand.fastnot(i.toArray).toVector)
   }
-  override def mux(a: HBit, b: HBit, s: HBit): HBit = {
-    en nand (en nand (a, en nand (s, s)), en nand (b, s))
+  override def mux(a: HBit, b: HBit, s: HBit): HBit =  (a, b, s) match {
+    case (HBit(i), HBit(j), HBit(k)) => HBit(en.homNand.fastmux((i ++ j ++ k).toArray).toVector)
   }
 }
