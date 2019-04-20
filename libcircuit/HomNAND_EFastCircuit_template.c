@@ -19,9 +19,9 @@ static void fastor(jboolean in[], jboolean out[]) {
   jboolean inb[N2];
   jboolean mid[N2];
   memcpy(&ina[0], &in[0], N * sizeof(jboolean));
-  memcpy(&ina[16], &in[0], N * sizeof(jboolean));
-  memcpy(&inb[0], &in[16], N * sizeof(jboolean));
-  memcpy(&inb[16], &in[16], N * sizeof(jboolean));
+  memcpy(&ina[N], &in[0], N * sizeof(jboolean));
+  memcpy(&inb[0], &in[N], N * sizeof(jboolean));
+  memcpy(&inb[N], &in[N], N * sizeof(jboolean));
   fastnand(ina, &mid[0]);
   fastnand(inb, &mid[N]);
   fastnand(mid, out);
@@ -131,7 +131,7 @@ static void fastmux4kway16(jboolean in[], jboolean out[]) {
     memcpy(&tmp[8192 * N], &in[65536 * N], 9 * N * sizeof(jboolean));
     fastmux512way16(tmp, &otmp[i * 16 * N]);
   }
-  memcpy(&otmp[128 * N], &in[65536 * N + 6 * N], 3 * N * sizeof(jboolean));
+  memcpy(&otmp[128 * N], &in[65536 * N + 9 * N], 3 * N * sizeof(jboolean));
   fastmux8way16(otmp, out);
 }
 
