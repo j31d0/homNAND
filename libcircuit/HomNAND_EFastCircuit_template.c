@@ -146,6 +146,21 @@ static void fastdmux(jboolean in[], jboolean out[]) {
   fastnot(t1a, out);
   fastnot(t2a, &out[N]);
 }
+static void fastdmux4way(jboolean in[], jboolean out[]) {
+  jboolean* sh = &in[N + N];
+  jboolean* sl = &in[N];
+  jboolean tmp[N2];
+  jboolean w[N2];
+  memcpy(tmp, in, N * sizeof(jboolean));
+  memcpy(&tmp[N], sh, N * sizeof(jboolean));
+  fastdmux(tmp, w);
+  memcpy(tmp, w, N * sizeof(jboolean));
+  memcpy(&tmp[N], sl, N * sizeof(jboolean));
+  fastdmux(tmp, out);
+  memcpy(tmp, &w[N], N * sizeof(jboolean));
+  memcpy(&tmp[N], sl, N * sizeof(jboolean));
+  fastdmux(tmp, &out[2 * N]);
+}
 static void fastbit(jboolean in[], jboolean out[]) {
   //(ea.el mux (s, in, load), s)
   fastmux(in, out);
@@ -292,6 +307,16 @@ fastdmux(in, out);
 jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,N2);
 (*env)->ReleaseBooleanArrayElements(env, arr, in, 0);
 (*env)->SetBooleanArrayRegion(env,outp,0,N2,(jboolean*)(&out));
+return outp;
+}
+JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastdmux4way
+  (JNIEnv * env, jobject obj, jbooleanArray arr) {
+jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);
+jboolean out[N * 4];
+fastdmux4way(in, out);
+jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,N * 4);
+(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);
+(*env)->SetBooleanArrayRegion(env,outp,0,N * 4,(jboolean*)(&out));
 return outp;
 }
 JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastbit

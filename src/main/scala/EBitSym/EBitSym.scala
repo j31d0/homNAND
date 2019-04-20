@@ -151,6 +151,7 @@ class EFastCircuit {
   @native def fastmux512way16(f: Array[Boolean]): Array[Boolean]
   @native def fastmux4kway16(f: Array[Boolean]): Array[Boolean]
   @native def fastdmux(f: Array[Boolean]): Array[Boolean]
+  @native def fastdmux4way(f: Array[Boolean]): Array[Boolean]
   @native def fastbit(f: Array[Boolean]): Array[Boolean]
   @native def fastreg(f: Array[Boolean]): Array[Boolean]
 }
