@@ -181,3 +181,15 @@ object HBitLogic extends EBitLogic(HBitNand) {
     case (HBit(i), HBit(j), HBit(k)) => HBit(en.homNand.fastmux((i ++ j ++ k).toArray).toVector)
   }
 }
+
+object HBitArith extends EBitArith(HBitLogic) {
+  override val el = HBitLogic
+}
+
+object HBitSeq extends EBitSeq(HBitArith) {
+  override val ea = HBitArith
+}
+
+object HBitComputer extends EBitComputer(HBitSeq) {
+  override val es = HBitSeq
+}
