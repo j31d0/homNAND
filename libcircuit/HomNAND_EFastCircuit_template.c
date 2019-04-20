@@ -150,7 +150,7 @@ static void fastreg(jboolean in[], jboolean out[]) {
     memcpy(&tmp[2 * N], &in[32 * N], N * sizeof(jboolean));
     fastmux(tmp, &out[i * N]);
   }
-  memcpy(in, &out[N * 16], N * 16 * sizeof(jboolean));
+  memcpy(&out[N * 16], in, N * 16 * sizeof(jboolean));
 }
 
 JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastnand
