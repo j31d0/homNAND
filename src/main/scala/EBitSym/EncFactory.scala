@@ -222,7 +222,7 @@ object HBitLogic extends EBitLogic(HBitNand) {
     val hv = h.map { case HBit(i) => i }.reduce(_ ++ _)
     val sv = s.map { case HBit(i) => i }.reduce(_ ++ _)
 
-    val res = (en.homNand.fastmux8way16((av ++ bv ++ cv ++ dv ++ sv).toArray).toVector grouped en.bsize).map(HBit(_)).toVector
+    val res = (en.homNand.fastmux8way16((av ++ bv ++ cv ++ dv ++ ev ++ fv ++ gv ++ hv ++ sv).toArray).toVector grouped en.bsize).map(HBit(_)).toVector
     res
   }
 
@@ -254,6 +254,7 @@ object HBitSeq extends EBitSeq(HBitArith) {
       (f(0), f(1))
     }
   }
+
   override def reg(s: Vector[HBit], in: Vector[HBit], load: HBit): (Vector[HBit], Vector[HBit]) = (s, in, load) match {
     case (_, _, HBit(k)) => {
       val so = s.map { case HBit(i) => i }.reduce(_ ++ _)
@@ -263,6 +264,27 @@ object HBitSeq extends EBitSeq(HBitArith) {
       // (ea.el mux (s, in, load), s)
       (fv(0), fv(1))
     }
+  }
+
+  override def rom8(s: Vector[HBit], address: Vector[HBit]): Vector[HBit] = {
+    val sv = s.map { case HBit(i) => i }.reduce(_ ++ _)
+    val av = address.map { case HBit(i) => i }.reduce(_ ++ _)
+    (ea.el.en.homNand.fastmux8way16((sv ++ av).toArray).toVector grouped ea.el.en.bsize).map(HBit(_)).toVector
+  }
+  override def rom64(s: Vector[HBit], address: Vector[HBit]): Vector[HBit] = {
+    val sv = s.map { case HBit(i) => i }.reduce(_ ++ _)
+    val av = address.map { case HBit(i) => i }.reduce(_ ++ _)
+    (ea.el.en.homNand.fastmux64way16((sv ++ av).toArray).toVector grouped ea.el.en.bsize).map(HBit(_)).toVector
+  }
+  override def rom512(s: Vector[HBit], address: Vector[HBit]): Vector[HBit] = {
+    val sv = s.map { case HBit(i) => i }.reduce(_ ++ _)
+    val av = address.map { case HBit(i) => i }.reduce(_ ++ _)
+    (ea.el.en.homNand.fastmux512way16((sv ++ av).toArray).toVector grouped ea.el.en.bsize).map(HBit(_)).toVector
+  }
+  override def rom4k(s: Vector[HBit], address: Vector[HBit]): Vector[HBit] = {
+    val sv = s.map { case HBit(i) => i }.reduce(_ ++ _)
+    val av = address.map { case HBit(i) => i }.reduce(_ ++ _)
+    (ea.el.en.homNand.fastmux4kway16((sv ++ av).toArray).toVector grouped ea.el.en.bsize).map(HBit(_)).toVector
   }
 
 }

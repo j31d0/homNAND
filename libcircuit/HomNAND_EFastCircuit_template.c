@@ -88,14 +88,53 @@ static void fastmux8way16(jboolean in[], jboolean out[]) {
   jboolean tmp[64 * N + 2 * N];
   jboolean otmp[32 * N + N];
   memcpy(tmp , &in[0], 64 * N * sizeof(jboolean));
-  memcpy(&tmp[64 * N], &in[64 * N], 2 * N * sizeof(jboolean));
+  memcpy(&tmp[64 * N], &in[128 * N], 2 * N * sizeof(jboolean));
   fastmux4way16(tmp, otmp);
   memcpy(tmp , &in[64 * N], 64 * N * sizeof(jboolean));
-  memcpy(&tmp[64 * N], &in[64 * N], 2 * N * sizeof(jboolean));
+  memcpy(&tmp[64 * N], &in[128 * N], 2 * N * sizeof(jboolean));
   fastmux4way16(tmp, &otmp[16 * N]);
-  memcpy(&otmp[32 * N], &in[64 * N + 2 * N], N * sizeof(jboolean));
+  memcpy(&otmp[32 * N], &in[128 * N + 2 * N], N * sizeof(jboolean));
   fastmux16(otmp, out);
 }
+
+static void fastmux64way16(jboolean in[], jboolean out[]) {
+  jboolean tmp[128 * N + 3 * N];
+  jboolean otmp[128 * N + 3 * N];
+  int i = 0;
+  for(i = 0; i < 8; i++) {
+    memcpy(tmp , &in[i * 128 * N], 128 * N * sizeof(jboolean));
+    memcpy(&tmp[128 * N], &in[1024 * N], 3 * N * sizeof(jboolean));
+    fastmux8way16(tmp, &otmp[i * 16 * N]);
+  }
+  memcpy(&otmp[128 * N], &in[1024 * N + 3 * N], 3 * N * sizeof(jboolean));
+  fastmux8way16(otmp, out);
+}
+
+static void fastmux512way16(jboolean in[], jboolean out[]) {
+  jboolean tmp[1024 * N + 6 * N];
+  jboolean otmp[128 * N + 3 * N];
+  int i = 0;
+  for(i = 0; i < 8; i++) {
+    memcpy(tmp , &in[i * 1024 * N], 1024 * N * sizeof(jboolean));
+    memcpy(&tmp[1024 * N], &in[8192 * N], 6 * N * sizeof(jboolean));
+    fastmux64way16(tmp, &otmp[i * 16 * N]);
+  }
+  memcpy(&otmp[128 * N], &in[8192 * N + 6 * N], 3 * N * sizeof(jboolean));
+  fastmux8way16(otmp, out);
+}
+static void fastmux4kway16(jboolean in[], jboolean out[]) {
+  jboolean tmp[8192 * N + 9 * N];
+  jboolean otmp[128 * N + 3 * N];
+  int i = 0;
+  for(i = 0; i < 8; i++) {
+    memcpy(tmp , &in[i * 8192 * N], 8192 * N * sizeof(jboolean));
+    memcpy(&tmp[8192 * N], &in[65536 * N], 9 * N * sizeof(jboolean));
+    fastmux512way16(tmp, &otmp[i * 16 * N]);
+  }
+  memcpy(&otmp[128 * N], &in[65536 * N + 6 * N], 3 * N * sizeof(jboolean));
+  fastmux8way16(otmp, out);
+}
+
 static void fastbit(jboolean in[], jboolean out[]) {
   //(ea.el mux (s, in, load), s)
   fastmux(in, out);
@@ -199,6 +238,36 @@ JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastmux8way16
 jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);
 jboolean out[N * 16];
 fastmux8way16(in, out);
+jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,N * 16);
+(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);
+(*env)->SetBooleanArrayRegion(env,outp,0,N * 16,(jboolean*)(&out));
+return outp;
+}
+JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastmux64way16
+  (JNIEnv * env, jobject obj, jbooleanArray arr) {
+jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);
+jboolean out[N * 16];
+fastmux64way16(in, out);
+jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,N * 16);
+(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);
+(*env)->SetBooleanArrayRegion(env,outp,0,N * 16,(jboolean*)(&out));
+return outp;
+}
+JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastmux512way16
+  (JNIEnv * env, jobject obj, jbooleanArray arr) {
+jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);
+jboolean out[N * 16];
+fastmux512way16(in, out);
+jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,N * 16);
+(*env)->ReleaseBooleanArrayElements(env, arr, in, 0);
+(*env)->SetBooleanArrayRegion(env,outp,0,N * 16,(jboolean*)(&out));
+return outp;
+}
+JNIEXPORT jbooleanArray JNICALL Java_HomNAND_EFastCircuit_fastmux4kway16
+  (JNIEnv * env, jobject obj, jbooleanArray arr) {
+jboolean *in = (*env)->GetBooleanArrayElements(env, arr, 0);
+jboolean out[N * 16];
+fastmux4kway16(in, out);
 jintArray outp=(jbooleanArray)(*env)->NewBooleanArray(env,N * 16);
 (*env)->ReleaseBooleanArrayElements(env, arr, in, 0);
 (*env)->SetBooleanArrayRegion(env,outp,0,N * 16,(jboolean*)(&out));
