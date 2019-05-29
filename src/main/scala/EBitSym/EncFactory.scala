@@ -82,14 +82,16 @@ object EncFactory {
   }
 
   def dec(a: Vector[EBitSym], key: Vector[EBitSym]) = {
-    val k = isubstitution(a)
-    val kb = (k zip key).map{ case (i, j) => i xor j}
+    //val k = isubstitution(a)
+    val kb = (a zip key).map{ case (i, j) => i xor j}
     kb
+    //k
   }
   def enc(da: Vector[EBitSym], key: Vector[EBitSym]) = {
     val db = (da zip key).map{ case (i, j) => i xor j}
-    val dk = substitution(db)
-    dk
+    db
+    //val dk = substitution(da)
+    //dk
   }
 
   def genHNand(key: Vector[EBitSym]): Vector[EBitSym] = {
@@ -104,7 +106,6 @@ object EncFactory {
   }
 
   def prepare(ex: Vector[EBitSym]): EFastCircuit = {
-    println(ex)
     val k = ex.map(_.toExpr)
     val tmpString = Source.fromFile("./libcircuit/HomNAND_EFastCircuit_template.c").mkString
     val kl = k.length
@@ -126,10 +127,11 @@ object HBitNand extends EBitNand {
   val bsize = 16
   val key: Short = 0xfe92.toShort
   val rseed = Random
-  val homNand = EncFactory.prepare(EncFactory.genHNand(EncFactory.genShort(key)))
+  lazy val homNand = EncFactory.prepare(EncFactory.genHNand(EncFactory.genShort(key)))
   val efalse: HBit = HBit(EncFactory.enc(EncFactory.genShort(31322.toShort), EncFactory.genShort(key)).map((f) => f.eval(Vector())))
   val etrue: HBit = HBit(EncFactory.enc(EncFactory.genShort(26585.toShort), EncFactory.genShort(key)).map((f) => f.eval(Vector())))
   def apply(a: Boolean): T = HBit(EncFactory.enc(Vector.tabulate(bsize)((n) => SymLocBit(n)), EncFactory.genShort(key)).map((f) => f.eval(a +: Vector.tabulate(bsize - 1)((n) => rseed.nextBoolean))))
+  def decrypt(t: HBit): Boolean = EncFactory.dec(Vector.tabulate(bsize)((n) => SymLocBit(n)), EncFactory.genShort(key)).map((f) => f.eval(t.v)) apply 0
   def nand(a: HBit, b: HBit): HBit = (a, b) match {
     case (HBit(i), HBit(j)) => HBit(homNand.fastnand((i ++ j).toArray).toVector)
   }

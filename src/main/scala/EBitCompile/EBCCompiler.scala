@@ -524,7 +524,6 @@ case object EBCCompilerIntegration {
     EBCParserIntegration(Source.fromFile(f).mkString).right.map {
       case i => {
         val nb = EBCCompiler(i).bootStrap
-        println(nb)
         val (rom, ram) = nb.toBin
         rom.map(toVector(_)).reduce(_ ++ _) ++ ram.map(toVector(_)).reduce(_ ++ _)
       }
